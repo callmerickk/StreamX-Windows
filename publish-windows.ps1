@@ -1,5 +1,10 @@
+param(
+  [ValidateSet('win-x64','win-arm64')][string]$Runtime = 'win-arm64',
+  [string]$Configuration = 'Release'
+)
 $ErrorActionPreference = 'Stop'
-dotnet restore .\StreamX.Windows.csproj
-dotnet publish .\StreamX.Windows.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=false -o .\publish\win-x64
-dotnet publish .\StreamX.Windows.csproj -c Release -r win-arm64 --self-contained true -p:PublishSingleFile=false -o .\publish\win-arm64
-Write-Host 'Publish complete. Test each output on its matching Windows architecture.'
+$project = Join-Path $PSScriptRoot 'StreamX.Windows.csproj'
+$out = Join-Path $PSScriptRoot "publish/$Runtime"
+dotnet restore $project -r $Runtime
+dotnet publish $project -c $Configuration -r $Runtime --self-contained true -p:PublishSingleFile=false -o $out
+Write-Host "Published StreamX Windows v0.2 to $out"

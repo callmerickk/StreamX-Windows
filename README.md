@@ -1,28 +1,48 @@
-# StreamX
-(project folder is still called StreamNest so the GitHub build keeps working)
-Disney+/Hotstar-inspired Android app (Kotlin, Compose, Media3 ExoPlayer).
+# StreamX Windows v0.2 — live-catalogue interface milestone
 
-- Start: "Who's watching?" profile picker (per-profile history & watchlist; Kids profile shows animated/family titles)
-- Navigation: Home / Search / My Space. All settings live behind My Space -> Help & Settings
-- Customize: Help & Settings -> Advanced -> Developer's Corner (password protected)
-- Icons: 3 launcher icons (Red Glow default, Ribbon X, Halo Play) = activity-aliases in AndroidManifest.xml; art in res/drawable/ic_bg_*/ic_fg_*/logo_*.xml + res/mipmap-*; switching logic in AppIcons.kt
-- Name under the icon: res/values/strings.xml
-- Signing: app/streamnest.keystore is used for every build so updates install over the old app. Never delete it.
-- Metadata: Cinemeta (built-in, default addon)
-- Addons: Stremio addon protocol (catalog / meta / stream / subtitles)
-- Player: Media3 ExoPlayer (Apache-2.0), CC button for subtitle tracks
-- Only direct-URL streams (HTTP/HLS/DASH) play. Torrent/infoHash streams are not supported.
+This is a Windows 10/11 WPF + WebView2 application for x64 and ARM64. It is a **work-in-progress port**, not full feature parity with StreamX TV yet.
 
-## Build
-1. Open this folder in Android Studio (Koala or newer). It generates the Gradle wrapper.
-2. Sync, then Run on a device/emulator (minSdk 24).
+## What v0.2 changes from the failed v0.1 prototype
 
-- Voice assistant: AI button next to the capsule. Mood -> genre rules live in Voice.kt (offline, no API key)
-- Changelog: Changelog.kt (shown in Help & Settings > Update Log). Add an entry every version.
-- Popups: always use PremiumAlert / PremiumDialog / PremiumSheet (Premium.kt), never plain AlertDialog
-- Streams: tags, Fusion badges, filters and regex fallbacks in Streams.kt; sources page in SourcesScreen.kt
-- Startup: Startup.kt (splash + Who's watching). Audio: Jellyfin FFmpeg decoder (media3-ffmpeg-decoder must match the Media3 version).
-- AI: Ai.kt (OpenAI-compatible client, memory). Votes + recommendations: Vote.kt. Quick Start + TMDB/MDBList: Quick.kt. Detail page: Detail.kt.
-- Engines: Engine.kt (StreamHeaders for addon request headers, VlcEngine). Playback > Player engine (auto/exo/vlc).
-- Size: debug build is shrunk by R8 (shrink only, no obfuscation) + arm64-v8a only + compressed jniLibs. VLC is the default engine.
-- Version: v0.9.3 (versionCode 12). Every build: versionCode +1, versionName 0.<code>
+- Uses the original StreamX logo-mark asset and bundled Inter/Poppins fonts from the Android TV source.
+- Recreates the TV layout rules more closely: 64 px icon rail that expands to 260 px, large featured deck with neighbouring card peeks, eight-second idle deck advancement, and 120×180 → 360×180 poster expansion over 200 ms.
+- Removes the made-up catalogue titles and gradient-only poster placeholders.
+- Loads catalogue metadata/artwork from the default Cinemeta addon and other user-added Stremio-compatible addon manifests.
+- Adds addon installation/removal, live search against addon search catalogs, title metadata requests, and stream-source discovery.
+- Persists addon URLs and local My List/profile name in Windows local app data/WebView local storage.
+- Builds portable self-contained artifacts for `win-arm64` and `win-x64` through GitHub Actions.
+
+## Build on GitHub
+
+The workflow lives at `.github/workflows/windows-build.yml`. On every push to `main` or manual `workflow_dispatch`, it restores, builds and publishes the project separately for `win-arm64` and `win-x64`.
+
+Artifacts are versioned ZIPs containing the published app folder. For a Snapdragon PC, download the ARM64 artifact. For Intel/AMD, download x64.
+
+## Run locally
+
+Install the .NET 8 SDK for your architecture and Microsoft Edge WebView2 Runtime if not already installed. From this directory:
+
+```powershell
+dotnet restore .\StreamX.Windows.csproj
+dotnet run --project .\StreamX.Windows.csproj
+```
+
+## Important feature status
+
+- **Implemented in this milestone:** live catalogue metadata and artwork through Cinemeta/Stremio-compatible APIs; addon manifest management; addon catalogue/search/meta/stream requests; title details; local My List and profile name; a separate native Windows playback window using LibVLCSharp/LibVLC; play/pause, seek, ±10-second skip, volume, fullscreen, and audio/subtitle track selection where the stream exposes tracks.
+- **Direct stream support:** HTTP/HTTPS URLs are passed to LibVLC. Common `User-Agent`, `Referer`, and `Cookie` headers from compatible stream objects are forwarded where recognized. Playback depends on the source format, codec, server rules, headers, and whether the addon supplies a playable URL.
+- **Still not at Android TV parity:** torrent/infoHash sources, addon-specific JavaScript/Rhino execution, specialized resolvers, arbitrary custom HTTP headers, DRM-protected sources, subtitle download/search workflows, skip intro/recap, voice controls, watch-together, downloads, account/cloud sync, full history/resume synchronization, and the Android player’s specialized recovery behavior remain unported.
+- The native player is a real Windows playback engine foundation rather than the previous browser `<video>` mockup, but it still requires real-source testing on both architectures and feature-by-feature porting before claiming parity.
+
+## Local data
+
+Addon URLs: `%LOCALAPPDATA%\StreamX\addons.json`
+My List and profile name: WebView local storage for the StreamX origin.
+
+## Playback engine licensing
+
+The Windows player uses LibVLCSharp and VideoLAN LibVLC Windows. Review the libraries' LGPL-2.1-or-later licensing and redistribution requirements before publishing public installers. See https://www.nuget.org/packages/LibVLCSharp.WPF and https://www.nuget.org/packages/VideoLAN.LibVLC.Windows.
+
+## Original Android TV source
+
+The original Android TV archive was inspected during development but is intentionally not included in this Windows package: it contains Android-only build/signing material. `Reference/ANDROID-TV-PORTING-NOTES.md` records the source mapping and the behaviors this port aims to preserve. The original Android repository should remain separate and unchanged.
